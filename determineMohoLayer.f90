@@ -1,27 +1,27 @@
-! Obtain the Mohorovičić discontinuity layer number in the 1D earth model files
-program get_moho_layer
+! Obtain the Mohorovičić discontinuity node number in the 1D earth model files
+program get_moho_node
     implicit none
-    integer :: moholayer, totallayers, totalDiscont, totalheaders=3
+    integer :: mohonode, totalnodes, totalDiscont, totalheaders=3
     ! character (len=256) :: model_file = 'model1D.dat' !SEMUCB
     character (len=256) :: model_file = 'model1D_prem.dat' !PREM
 
-    call det_moho_layer(model_file, totalheaders, totallayers, totalDiscont, moholayer)
+    call det_moho_node(model_file, totalheaders, totalnodes, totalDiscont, mohonode)
 
     write(*,21) 'Model file is : ', trim(model_file)
-    write(*,22) 'Total #layers is : ',totallayers
+    write(*,22) 'Total #nodes is : ',totalnodes
     write(*,22) 'Total #discontinuities is : ',totalDiscont
-    write(*,23) 'Moho layer # is: ',moholayer,' (line #',moholayer+totalheaders,')'
+    write(*,23) 'Moho node # is: ',mohonode,' (line #',mohonode+totalheaders,')'
 
 
     21 format(2A)
     22 format(A,I5)
     23 format(A,I5,A,I5,A)
     
-end program get_moho_layer
+end program get_moho_node
 
 
-!! subroutine to get the moho layer number
-subroutine det_moho_layer(model_file, totalheaders, NUM_LINES, totalDiscont, moholayer)
+!! subroutine to get the moho node number
+subroutine det_moho_node(model_file, totalheaders, num_lines, totalDiscont, mohonode)
     implicit none
 
     !! Declare vars
@@ -33,11 +33,11 @@ subroutine det_moho_layer(model_file, totalheaders, NUM_LINES, totalDiscont, moh
     real (kind=8) :: tol = 2.0d0**(-5), maxderivdensity = 0.
     integer :: i = 0, IERR = 0
     integer, intent(in) :: totalheaders
-    integer, intent(inout) :: NUM_LINES, moholayer, totalDiscont
+    integer, intent(inout) :: num_lines, mohonode, totalDiscont
     integer :: j
 
-    moholayer = 1 !initialize moho layer
-    NUM_LINES = 0 !initialize num of layers in the file
+    mohonode = 1 !initialize moho node
+    num_lines = 0 !initialize num of nodes in the file
     open(FID, file=model_file, status="old",iostat=IERR)
     
 
@@ -47,17 +47,17 @@ subroutine det_moho_layer(model_file, totalheaders, NUM_LINES, totalDiscont, moh
     end do
     
     do while (IERR == 0)
-        NUM_LINES = NUM_LINES + 1
+        num_lines = num_lines + 1
         read(FID,*,iostat=IERR) CTMP
     end do
-    NUM_LINES = NUM_LINES - 1
-    ! write(*,'(A,I0)') "Total number of layers: ", NUM_LINES
+    num_lines = num_lines - 1
+    ! write(*,'(A,I0)') "Total number of nodes: ", num_lines
 
 
     ! Allocate array of strings
-    allocate(radius(NUM_LINES), density(NUM_LINES), vpv(NUM_LINES), vsv(NUM_LINES), qkappa(NUM_LINES))
-    allocate(qmu(NUM_LINES), vph(NUM_LINES),vsh(NUM_LINES),eta(NUM_LINES))
-    allocate(derivdensity(NUM_LINES), derivVp(NUM_LINES), derivVs(NUM_LINES))
+    allocate(radius(num_lines), density(num_lines), vpv(num_lines), vsv(num_lines), qkappa(num_lines))
+    allocate(qmu(num_lines), vph(num_lines),vsh(num_lines),eta(num_lines))
+    allocate(derivdensity(num_lines), derivVp(num_lines), derivVs(num_lines))
     
     
 
@@ -66,7 +66,7 @@ subroutine det_moho_layer(model_file, totalheaders, NUM_LINES, totalDiscont, moh
     do i = 1, totalheaders
         read( FID, * )   !! skip the header
     end do
-    do i = 1, NUM_LINES
+    do i = 1, num_lines
         read(FID,*) radius(i), density(i), vpv(i), vsv(i), qkappa(i),qmu(i), vph(i),vsh(i),eta(i)  !Read the data
         ! print*, i, radius(i), density(i), vpv(i), vsv(i), qkappa(i),qmu(i), vph(i),vsh(i),eta(i) !! Print out the results    
     end do
@@ -74,7 +74,7 @@ subroutine det_moho_layer(model_file, totalheaders, NUM_LINES, totalDiscont, moh
 
     ! find the discontinuities
     totalDiscont = 0
-    do i = 1, NUM_LINES-1
+    do i = 1, num_lines-1
         if (abs(radius(i+1)-radius(i)) < tol)  then
             derivdensity(i) = density(i+1)-density(i)
             derivVp(i) = vpv(i+1)-vpv(i)
@@ -93,7 +93,7 @@ subroutine det_moho_layer(model_file, totalheaders, NUM_LINES, totalDiscont, moh
     
     
     
-    ! Determine the Mohorovicic discontinuity layer
+    ! Determine the Mohorovicic discontinuity node
     ! Conditions to select the moho discontinuity: 
     ! 1. Radius don't change, hence discontinuity
     ! 2. Vsv(i) and Vsv(i+1) > 0
@@ -102,7 +102,7 @@ subroutine det_moho_layer(model_file, totalheaders, NUM_LINES, totalDiscont, moh
     ! 5. max density change within 90 km from surface
 
     j = 1
-    do i = 1, NUM_LINES-1
+    do i = 1, num_lines-1
         if (abs(radius(i+1)-radius(i)) < tol) then
             if ((abs(vsv(i)) > tol) .and. (abs(vsv(i+1)) > tol) .and. (abs(derivVs(i)) > tol) &
             .and. (abs(radius(i)-6371000.) < 90000.)) then
@@ -110,7 +110,7 @@ subroutine det_moho_layer(model_file, totalheaders, NUM_LINES, totalDiscont, moh
                 
                 if (abs(derivdensity(i)) > maxderivdensity) then
                     maxderivdensity = abs(derivdensity(i))
-                    moholayer = i
+                    mohonode = i
                 end if
             end if
             j = j + 1
@@ -119,7 +119,7 @@ subroutine det_moho_layer(model_file, totalheaders, NUM_LINES, totalDiscont, moh
     
     
     
-    ! write(*,12) 'Moho layer number is: ',moholayer
+    ! write(*,12) 'Moho node number is: ',mohonode
 
     ! 11 format(2I5,10F12.2)
     ! 12 format(A,I5)
@@ -130,4 +130,4 @@ subroutine det_moho_layer(model_file, totalheaders, NUM_LINES, totalDiscont, moh
     deallocate(derivdensity, derivVp, derivVs)
 
 
-end subroutine det_moho_layer
+end subroutine det_moho_node
