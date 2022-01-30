@@ -3,6 +3,7 @@
 The Mohorovičić discontinuity, usually referred to as the Moho discontinuity or the Moho, is the boundary between the Earth's crust and the mantle. It is defined by the distinct change in velocity of seismological waves as they pass through changing densities of rock. This distinctive discontinuous layer extends from 30 km to 50 km below the continents and about 10 km below sea-level in the ocean basins.
 
 ## Compile the code
+Requires the installation of `gfortran` or add your compiler to the `makefile`.
 ```
 make clean
 make
